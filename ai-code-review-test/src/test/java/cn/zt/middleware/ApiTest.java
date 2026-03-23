@@ -18,6 +18,7 @@ public class ApiTest {
     @Test
     public void test() {
         System.out.println(Integer.parseInt("111"));
+        System.out.println("这是新增的代码");
     }
 
 }
