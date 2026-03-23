@@ -1,13 +1,22 @@
 package cn.zt.middleware;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.ApiKey;
+import org.springframework.ai.model.SimpleApiKey;
+import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.http.HttpHeaders;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -83,18 +92,34 @@ public class AiCodeReview {
     }
 
     private static String codeReview(String diffCode){
-        OpenAiApi openAiApi = new OpenAiApi("https://dashscope.aliyuncs.com/compatible-mode", "sk-e7ae89159bbd4fd585e9f60eda5e9d41");
+        ApiKey apiKey = new SimpleApiKey("sk-e7ae89159bbd4fd585e9f60eda5e9d41");
+        OpenAiApi openAiApi = new OpenAiApi(
+                "https://dashscope.aliyuncs.com/compatible-mode",
+                apiKey, // 再次提醒：跑通后记得去阿里云控制台重置这个 Key 哦！
+                new HttpHeaders(), // 安全的空请求头
+                "/v1/chat/completions", // 关键修复：大模型聊天补全接口路径
+                "/v1/embeddings",       // 关键修复：向量化接口路径
+                RestClient.builder(),
+                WebClient.builder(), // WebClient (不使用响应式编程则传 null)
+                new DefaultResponseErrorHandler()
+        );
         OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .withModel("qwen3-max")
-                .withTemperature(0.7f)
+                .model("qwen3-max")
+                .temperature(0.7)
                 .build();
-        OpenAiChatModel openAiChatModel = new OpenAiChatModel(openAiApi, options);
+        org.springframework.ai.openai.OpenAiChatModel openAiChatModel = new org.springframework.ai.openai.OpenAiChatModel(
+                openAiApi,
+                options,
+                ToolCallingManager.builder().build(), // ToolCallingManager，纯文本评审暂不提供工具回调
+                RetryTemplate.defaultInstance(), // 默认重试策略
+                ObservationRegistry.NOOP // 禁用探针监控
+        );
 
         SystemMessage systemMessage = new SystemMessage(systemPrompt);
         UserMessage userMessage = new UserMessage(diffCode);
 
         Prompt prompt = new Prompt(List.of(systemMessage, userMessage));
         ChatResponse response = openAiChatModel.call(prompt);
-        return response.getResult().getOutput().getContent();
+        return response.getResult().getOutput().getText();
     }
 }
