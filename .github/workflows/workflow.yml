@@ -23,10 +23,13 @@ jobs:
         with:
           distribution: 'temurin'  # 你可以选择其他发行版，如 'adopt' 或 'zulu'
           java-version: '21'
+          cache: 'maven'
 
-      - name: Run Java code
+      - name: Run AI Code Review via Maven
         run: |
-          cd ai-code-review-sdk/src/main/java
-          javac cn/zt/middleware/AiCodeReview.java
-          java cn.zt.middleware.AiCodeReview
+          # 1. 进入包含 pom.xml 的根目录（注意：不要进到 src/main/java 里）
+          cd ai-code-review-sdk
+            
+          # 2. 使用 Maven 编译并直接运行 main 方法
+          mvn clean compile exec:java -Dexec.mainClass="cn.zt.middleware.AiCodeReview"
 
