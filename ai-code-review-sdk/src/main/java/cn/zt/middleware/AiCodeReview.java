@@ -88,7 +88,6 @@ public class AiCodeReview {
             diffCode.append(line).append("\n"); // 建议加上换行符，保证 diff 格式不乱
         }
 
-        // 【修复 Bug】：必须等待进程结束才能获取状态码
         int exitCode = process.waitFor();
         System.out.println("Git diff process exited with code: " + exitCode);
 
@@ -186,7 +185,7 @@ public class AiCodeReview {
                 writer.write(log);
             }
 
-            git.add().addFilepattern(dateFolderName + "/" + fileName).call();
+            git.add().addFilepattern(newFile.getPath()).call();
 
             String commitMsg = String.format("docs: add AI review for %s (commit: %s)", projectName, shortCommitId);
             git.commit().setMessage(commitMsg).call();
