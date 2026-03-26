@@ -188,14 +188,15 @@ public class AiCodeReview {
                 writer.write(log);
             }
 
-            git.add().addFilepattern(dateFolderName + "/" + fileName).call();
+            String gitPath = dateFolderName + "/" + fileName;
+            git.add().addFilepattern(gitPath).call();
 
             String commitMsg = String.format("docs: add AI review for %s (commit: %s)", projectName, shortCommitId);
             git.commit().setMessage(commitMsg).call();
 
             git.push().setCredentialsProvider(new UsernamePasswordCredentialsProvider(token,"")).call();
             System.out.println("Changes have been pushed to the repository.");
-            return "https://github.com/fuzhengwei/openai-code-review-log/blob/master/" + dateFolderName + "/" + fileName;
+            return "https://github.com/PriessFlower/Ai-Code-Review-Log/blob/main/" + gitPath;
         } finally {
             if (git != null) {
                 git.close(); // 释放 JGit 对 .git 目录下文件的锁,不然删除不了。
