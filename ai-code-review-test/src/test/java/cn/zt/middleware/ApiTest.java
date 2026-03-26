@@ -19,6 +19,7 @@ public class ApiTest {
     public void test() {
         System.out.println(Integer.parseInt("111"));
         System.out.println("这是新增的代码");
+        System.out.println("测试一下代码评审日志生成");
     }
 
 }
