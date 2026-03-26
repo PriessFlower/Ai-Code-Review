@@ -172,10 +172,13 @@ public class AiCodeReview {
                 folder.mkdirs();
             }
 
+            // 修复文件目录 Bug 将 projectName 中的 "/" 替换为 "-"，防止被识别为子目录
+            String safeProjectName = projectName.replace("/", "-");
+
             //只留下 commitId 前8位
             String shortCommitId = commitId.length() > 8 ? commitId.substring(0, 8) : commitId;
             // commitId + projectName做文件名
-            String fileName = projectName + "_" + shortCommitId + ".md";
+            String fileName = safeProjectName + "_" + shortCommitId + ".md";
             File newFile = new File(folder, fileName);
 
             //在文件前几行输入一些元信息
@@ -185,7 +188,7 @@ public class AiCodeReview {
                 writer.write(log);
             }
 
-            git.add().addFilepattern(newFile.getPath()).call();
+            git.add().addFilepattern(dateFolderName + "/" + fileName).call();
 
             String commitMsg = String.format("docs: add AI review for %s (commit: %s)", projectName, shortCommitId);
             git.commit().setMessage(commitMsg).call();
