@@ -26,6 +26,8 @@ jobs:
           cache: 'maven'
 
       - name: Run AI Code Review via Maven
+        env:
+          GITHUB_TOKEN: ${{ secrets.CODE_TOKEN }}
         run: |
           # 1. 进入包含 pom.xml 的根目录（注意：不要进到 src/main/java 里）
           cd ai-code-review-sdk
