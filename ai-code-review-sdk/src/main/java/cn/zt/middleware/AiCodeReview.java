@@ -1,6 +1,9 @@
 package cn.zt.middleware;
 
 import io.micrometer.observation.ObservationRegistry;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -18,10 +21,12 @@ import org.springframework.web.client.DefaultResponseErrorHandler;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -69,26 +74,53 @@ public class AiCodeReview {
             // 在这里给出你修改后的代码
             """;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException, GitAPIException {
 
-
+        // 1. 执行 Git 命令获取 Diff
         ProcessBuilder processBuilder = new ProcessBuilder("git", "diff", "HEAD~1", "HEAD");
-        //设置工作目录，以当前目录为工作目录。
         processBuilder.directory(new File("."));
-
         Process process = processBuilder.start();
 
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String line;
         StringBuilder diffCode = new StringBuilder();
         while ((line = bufferedReader.readLine()) != null) {
-            diffCode.append(line);
+            diffCode.append(line).append("\n"); // 建议加上换行符，保证 diff 格式不乱
         }
 
-        int exitCode = process.exitValue();
-        System.out.println("Exited with code:" + exitCode);
-        System.out.println("评审代码：" + diffCode.toString());
-        System.out.println(codeReview(diffCode.toString()));
+        // 【修复 Bug】：必须等待进程结束才能获取状态码
+        int exitCode = process.waitFor();
+        System.out.println("Git diff process exited with code: " + exitCode);
+
+        if (exitCode != 0 || diffCode.length() == 0) {
+            System.out.println("没有检测到代码变更或执行出错，退出评审。");
+            return;
+        }
+
+        // 2. 调用 AI 接口进行代码评审
+        System.out.println("正在请求 AI 进行代码评审...");
+        String reviewLog = codeReview(diffCode.toString());
+        System.out.println("AI 评审完成！");
+
+        // 3. 准备写入日志所需的参数 (通常这些信息在 CI/CD 环境中通过环境变量传入)
+        // 这里假设你是在 GitHub Actions 环境中运行，可以直接获取内置环境变量
+        String token = System.getenv("GITHUB_TOKEN");
+        if (token == null || token.isEmpty()) {
+            throw new IllegalArgumentException("未找到 GITHUB_TOKEN 环境变量，无法推送日志。");
+        }
+
+        // 获取当前的项目名和 Commit ID (如果环境变量没有，可以写死或用其他方式获取)
+        String projectName = System.getenv("GITHUB_REPOSITORY");
+        if (projectName == null) projectName = "ai-code-review-sdk"; // 兜底项目名
+
+        String commitId = System.getenv("GITHUB_SHA");
+        if (commitId == null) commitId = "unknown-commit"; // 兜底 Commit ID
+
+        // 4. 调用我们写好的 writeLog 方法，将评审结果推送到日志仓库
+        System.out.println("正在将评审结果推送到远程日志仓库...");
+        String logUrl = writeLog(reviewLog, projectName, commitId,token);
+
+        System.out.println("评审流程结束！日志访问地址: " + logUrl);
     }
 
     private static String codeReview(String diffCode){
@@ -107,7 +139,7 @@ public class AiCodeReview {
                 .model("qwen3-max")
                 .temperature(0.7)
                 .build();
-        org.springframework.ai.openai.OpenAiChatModel openAiChatModel = new org.springframework.ai.openai.OpenAiChatModel(
+        OpenAiChatModel openAiChatModel = new OpenAiChatModel(
                 openAiApi,
                 options,
                 ToolCallingManager.builder().build(), // ToolCallingManager，纯文本评审暂不提供工具回调
@@ -121,5 +153,65 @@ public class AiCodeReview {
         Prompt prompt = new Prompt(List.of(systemMessage, userMessage));
         ChatResponse response = openAiChatModel.call(prompt);
         return response.getResult().getOutput().getText();
+    }
+
+    public static String writeLog(String log,String projectName,String commitId,String token ) throws GitAPIException, IOException {
+        File repoDir = new File("repo");
+        deleteDirectory(repoDir);
+
+        Git git = null;
+        try {
+            git = Git.cloneRepository()
+                    .setURI("https://github.com/PriessFlower/Ai-Code-Review-Log.git")
+                    .setDirectory(new File("repo"))
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(token, ""))
+                    .call();
+
+            String dateFolderName = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            File folder = new File("repo/" + dateFolderName);
+            if(!folder.exists()){
+                folder.mkdirs();
+            }
+
+            //只留下 commitId 前8位
+            String shortCommitId = commitId.length() > 8 ? commitId.substring(0, 8) : commitId;
+            // commitId + projectName做文件名
+            String fileName = projectName + "_" + shortCommitId + ".md";
+            File newFile = new File(folder, fileName);
+
+            //在文件前几行输入一些元信息
+            try (FileWriter writer = new FileWriter(newFile)) {
+                writer.write("# " + projectName + " 代码评审日志\n");
+                writer.write("> 关联 Commit: `" + commitId + "`\n\n");
+                writer.write(log);
+            }
+
+            git.add().addFilepattern(dateFolderName + "/" + fileName).call();
+
+            String commitMsg = String.format("docs: add AI review for %s (commit: %s)", projectName, shortCommitId);
+            git.commit().setMessage(commitMsg).call();
+
+            git.push().setCredentialsProvider(new UsernamePasswordCredentialsProvider(token,"")).call();
+            System.out.println("Changes have been pushed to the repository.");
+            return "https://github.com/fuzhengwei/openai-code-review-log/blob/master/" + dateFolderName + "/" + fileName;
+        } finally {
+            if (git != null) {
+                git.close(); // 释放 JGit 对 .git 目录下文件的锁,不然删除不了。
+            }
+            deleteDirectory(repoDir);
+            System.out.println("临时仓库目录已清理干净。");
+        }
+    }
+
+
+    private static void deleteDirectory(File directoryToBeDeleted) throws IOException {
+        if (!directoryToBeDeleted.exists()) {
+            return;
+        }
+        // 使用 Java 8 的 NIO 库优雅地遍历并删除所有文件和子目录
+        Files.walk(directoryToBeDeleted.toPath())
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(File::delete);
     }
 }
