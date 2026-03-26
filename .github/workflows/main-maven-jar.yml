@@ -25,9 +25,13 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean install
+        env:
+          GITHUB_TOKEN: ${{ secrets.CODE_TOKEN }}
 
       - name: Copy ai-code-review-sdk JAR
         run: mvn dependency:copy -Dartifact=cn.zt:ai-code-review-sdk:1.0-SNAPSHOT -DoutputDirectory=./libs
+        env:
+          GITHUB_TOKEN: ${{ secrets.CODE_TOKEN }}
 
       - name: Run Code Review
         run: java -jar ./libs/ai-code-review-sdk-1.0-SNAPSHOT.jar
