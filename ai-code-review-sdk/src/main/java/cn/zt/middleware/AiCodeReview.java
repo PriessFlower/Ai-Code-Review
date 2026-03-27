@@ -1,5 +1,7 @@
 package cn.zt.middleware;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import io.micrometer.observation.ObservationRegistry;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -22,9 +24,14 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -73,6 +80,11 @@ public class AiCodeReview {
             ```[语言]
             // 在这里给出你修改后的代码
             """;
+    private static String APP_ID = "wxf0c05633e2eacdb8";
+    private static String SECRET = "06c217a6ae0142cce4e590562f6b0217";
+    private static String GET_ACCESSTOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s";
+    private static String TEMPLATE_ID = "1GsGAvZIC7xQbvFkZ3OAK2OoM1hqIETmLVPXvwxkCLM";
+    private static String SEND_TEMPLATEMSG_URL = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s";
 
     public static void main(String[] args) throws IOException, InterruptedException, GitAPIException {
 
@@ -118,6 +130,7 @@ public class AiCodeReview {
         // 4. 调用我们写好的 writeLog 方法，将评审结果推送到日志仓库
         System.out.println("正在将评审结果推送到远程日志仓库...");
         String logUrl = writeLog(reviewLog, projectName, commitId,token);
+        getAccessTokenAndSendTemplateMessage(projectName,logUrl);
 
         System.out.println("评审流程结束！日志访问地址: " + logUrl);
     }
@@ -217,4 +230,52 @@ public class AiCodeReview {
                 .map(Path::toFile)
                 .forEach(File::delete);
     }
+
+    private static void getAccessTokenAndSendTemplateMessage(String projectName,String reviewUrl) throws IOException, InterruptedException {
+        //get请求，需要把query参数拼接里
+        String reUrl = String.format(GET_ACCESSTOKEN_URL, APP_ID, SECRET);
+        HttpClient client = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_2)
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(reUrl))
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        String body = response.body();
+        String accessToken = JSON.parseObject(body).getString("access_token");
+
+        String sendMsgUrl = String.format(SEND_TEMPLATEMSG_URL, accessToken);
+        JSONObject jsonObject = new JSONObject();
+        JSONObject data = new JSONObject();
+        data.fluentPut("project",new TemplateItem(projectName,"#173177"))
+                .fluentPut("review",new TemplateItem(reviewUrl,"#173177"));
+        jsonObject.fluentPut("touser", "oh5Bu3AO8Bj6IIiBle_yqAGF-UTE")
+                .fluentPut("template_id", TEMPLATE_ID)
+                .fluentPut("topcolor", "#FF0000")
+                .fluentPut("data", data);
+        request = HttpRequest.newBuilder()
+                .uri(URI.create(sendMsgUrl))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonObject.toJSONString()))
+                .header("Content-Type", "application/json; charset=utf-8")
+                .build();
+        response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        return;
+    }
+
+    public static class TemplateItem {
+        public String value;
+        public String color;
+
+        public TemplateItem(String value, String color) {
+            this.value = value;
+            this.color = color;
+        }
+    }
+
 }
