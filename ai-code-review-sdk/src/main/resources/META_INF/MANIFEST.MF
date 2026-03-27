@@ -1,2 +1,0 @@
-Main-Class: cn.zt.middleware.AiCodeReview
-Manifest-Version: 1.0

@@ -1,5 +1,0 @@
-spring:
-  application:
-    name: ai-code-review-test-app
-  profiles:
-    active: dev
