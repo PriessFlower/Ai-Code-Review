@@ -30,12 +30,8 @@ ai-code-review/
 │       ├── AiCodeReviewApplication.java # Spring Boot 启动入口
 │       └── runner/
 │           └── CodeReviewRunner.java    # CommandLineRunner 主流程编排
-│
-├── .github/workflows/
-│   └── workflow.yml             # 本项目 CI/CD：构建 + 审查 + 发布 Release
-│
-└── docs/
-    └── SDK集成指南.md            # 本文档
+│── .github/workflows/
+   └── workflow.yml             # 本项目 CI/CD：构建 + 审查 + 发布 Release
 ```
 
 ---
@@ -158,17 +154,3 @@ https://github.com/{owner}/{repo}/releases/latest/download/ai-code-review-app-1.
 ```
 
 ---
-
-## 常见问题
-
-**Q：为什么不直接把 SDK 作为 Maven 依赖引入，而是下载 jar 运行？**
-
-A：代码审查是一个 CI/CD 阶段的独立工具，不应侵入目标项目的运行时类路径。下载 jar 运行的方式使目标项目完全无感知，不增加任何编译依赖，也不影响目标项目的 Spring Boot 上下文。
-
-**Q：每次 push 都会触发审查吗？**
-
-A：是的，默认对 `master` 分支的 push 和 PR 都触发。可以在 workflow 的 `on` 字段按需调整触发分支。
-
-**Q：`fetch-depth: 2` 为什么是必须的？**
-
-A：`git diff HEAD~1 HEAD` 需要访问最近两个提交。默认 `checkout@v4` 只拉取最新一个提交（shallow clone），设置 `fetch-depth: 2` 才能让 diff 命令正常执行。
