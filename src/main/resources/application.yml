@@ -1,6 +1,9 @@
 spring:
   application:
     name: ai-code-review
+    # 纯命令模式启动，不启动web server
+  main:
+    web-application-type: none
   ai:
     openai:
       base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
