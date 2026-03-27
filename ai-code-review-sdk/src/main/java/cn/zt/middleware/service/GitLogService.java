@@ -60,9 +60,7 @@ public class GitLogService {
             git.push().setCredentialsProvider(new UsernamePasswordCredentialsProvider(gitHubProperties.getToken(), "")).call();
             GitLogService.log.info("Changes have been pushed to the repository.");
 
-            // Derive blob URL from the repo URL
-            String repoBaseUrl = gitHubProperties.getLogRepoUrl()
-                    .replaceFirst("\\.git$", "");
+            String repoBaseUrl = gitHubProperties.getLogRepoUrl().replaceFirst("\\.git$", "");
             return repoBaseUrl + "/blob/main/" + gitPath;
         } finally {
             if (git != null) {
