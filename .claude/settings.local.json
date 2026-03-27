@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf \"D:/ai-code-review/ai-code-review-sdk\" && rm -rf \"D:/ai-code-review/ai-code-review-test\")"
+    ]
+  }
+}

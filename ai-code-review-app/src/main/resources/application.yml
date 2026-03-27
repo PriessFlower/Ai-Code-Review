@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: ai-code-review
+    # 纯命令模式启动，不启动web server
+  main:
+    web-application-type: none
+  ai:
+    openai:
+      base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+      api-key: ${AI_API_KEY}
+      chat:
+        options:
+          model: ${AI_MODEL:qwen3-max}
+          temperature: 0.7
+
+wechat:
+  app-id: ${WECHAT_APP_ID}
+  secret: ${WECHAT_SECRET}
+  template-id: ${WECHAT_TEMPLATE_ID}
+  to-user: ${WECHAT_TO_USER}
+
+github:
+  token: ${GITHUB_TOKEN}
+  log-repo-url: ${GITHUB_LOG_REPO_URL:https://github.com/PriessFlower/Ai-Code-Review-Log.git}
