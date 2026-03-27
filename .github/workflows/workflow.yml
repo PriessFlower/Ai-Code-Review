@@ -28,5 +28,10 @@ jobs:
       - name: Run AI Code Review via Maven
         env:
           GITHUB_TOKEN: ${{ secrets.CODE_TOKEN }}
-        run: mvn clean compile exec:java -Dexec.mainClass="cn.zt.middleware.AiCodeReview"
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
+          WECHAT_TEMPLATE_ID: ${{ secrets.WECHAT_TEMPLATE_ID }}
+          WECHAT_TO_USER: ${{ secrets.WECHAT_TO_USER }}
+        run: mvn spring-boot:run
 
