@@ -5,7 +5,10 @@ import cn.zt.middleware.model.TemplateItem;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 @Slf4j
@@ -13,7 +16,7 @@ import org.springframework.web.client.RestClient;
 public class WeChatNotifyService {
 
     private static final String GET_ACCESSTOKEN_URL =
-            "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s";
+            "https://api.weixin.qq.com/cgi-bin/stable_token";
     private static final String SEND_TEMPLATEMSG_URL =
             "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=%s";
 
@@ -31,12 +34,21 @@ public class WeChatNotifyService {
     }
 
     private String getAccessToken() {
-        String url = String.format(GET_ACCESSTOKEN_URL, weChatProperties.getAppId(), weChatProperties.getSecret());
-        String body = restClient.get()
-                .uri(url)
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("grant_type", "client_credential");
+        formData.add("appid", weChatProperties.getAppId());
+        formData.add("secret",weChatProperties.getSecret());
+        formData.add("force_refresh", "false");
+
+        String response = restClient.post()
+                .uri(GET_ACCESSTOKEN_URL)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED) // 关键：设置内容类型为表单
+                .accept(MediaType.APPLICATION_JSON)
+                .body(formData) // 传递表单数据
                 .retrieve()
                 .body(String.class);
-        String token = JSON.parseObject(body).getString("access_token");
+
+        String token = JSON.parseObject(response).getString("access_token");
         log.info("微信 access_token 获取成功");
         return token;
     }
