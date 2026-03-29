@@ -52,6 +52,19 @@ public class WeChatNotifyService {
     }
 
     private void sendTemplateMessage(String accessToken, String projectName, String reviewUrl) {
+        String response = doSendTemplateMessage(accessToken, projectName, reviewUrl);
+        JSONObject result = JSON.parseObject(response);
+
+        if (result.getIntValue("errcode") == 40001) {
+            log.warn("access_token 已失效，重新获取后重试");
+            accessToken = getAccessToken();
+            response = doSendTemplateMessage(accessToken, projectName, reviewUrl);
+        }
+
+        log.info("微信模板消息发送结果: {}", response);
+    }
+
+    private String doSendTemplateMessage(String accessToken, String projectName, String reviewUrl) {
         String url = String.format(SEND_TEMPLATEMSG_URL, accessToken);
 
         JSONObject data = new JSONObject();
@@ -64,13 +77,11 @@ public class WeChatNotifyService {
                 .fluentPut("topcolor", "#FF0000")
                 .fluentPut("data", data);
 
-        String response = restClient.post()
+        return restClient.post()
                 .uri(url)
                 .header("Content-Type", "application/json; charset=utf-8")
                 .body(body.toJSONString())
                 .retrieve()
                 .body(String.class);
-
-        log.info("微信模板消息发送结果: {}", response);
     }
 }
