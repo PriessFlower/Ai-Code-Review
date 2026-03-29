@@ -59,10 +59,17 @@ public class WeChatNotifyService {
         String response = doSendTemplateMessage(accessToken, projectName, reviewUrl);
         JSONObject result = JSON.parseObject(response);
 
-        if (result.getIntValue("errcode") == 40001) {
-            log.warn("access_token 已失效，强制刷新后重试");
-            accessToken = getAccessToken(true);
+        for (int attempt = 1; attempt <= 3 && result.getIntValue("errcode") == 40001; attempt++) {
+            log.warn("access_token 无效，第 {} 次重试（等待后重新获取）...", attempt);
+            try {
+                Thread.sleep(1500L * attempt);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            accessToken = getAccessToken(false);
             response = doSendTemplateMessage(accessToken, projectName, reviewUrl);
+            result = JSON.parseObject(response);
         }
 
         log.info("微信模板消息发送结果: {}", response);
