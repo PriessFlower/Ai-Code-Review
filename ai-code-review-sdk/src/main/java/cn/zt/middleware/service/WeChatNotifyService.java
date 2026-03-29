@@ -32,11 +32,15 @@ public class WeChatNotifyService {
     }
 
     private String getAccessToken() {
+        return getAccessToken(false);
+    }
+
+    private String getAccessToken(boolean forceRefresh) {
         JSONObject requestBody = new JSONObject();
         requestBody.put("grant_type", "client_credential");
         requestBody.put("appid", weChatProperties.getAppId());
         requestBody.put("secret", weChatProperties.getSecret());
-        requestBody.put("force_refresh", false);
+        requestBody.put("force_refresh", forceRefresh);
 
         String response = restClient.post()
                 .uri(GET_ACCESSTOKEN_URL)
@@ -56,8 +60,8 @@ public class WeChatNotifyService {
         JSONObject result = JSON.parseObject(response);
 
         if (result.getIntValue("errcode") == 40001) {
-            log.warn("access_token 已失效，重新获取后重试");
-            accessToken = getAccessToken();
+            log.warn("access_token 已失效，强制刷新后重试");
+            accessToken = getAccessToken(true);
             response = doSendTemplateMessage(accessToken, projectName, reviewUrl);
         }
 
