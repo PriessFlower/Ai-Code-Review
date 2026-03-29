@@ -7,8 +7,6 @@ import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 @Slf4j
@@ -34,17 +32,17 @@ public class WeChatNotifyService {
     }
 
     private String getAccessToken() {
-        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-        formData.add("grant_type", "client_credential");
-        formData.add("appid", weChatProperties.getAppId());
-        formData.add("secret",weChatProperties.getSecret());
-        formData.add("force_refresh", "false");
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("grant_type", "client_credential");
+        requestBody.put("appid", weChatProperties.getAppId());
+        requestBody.put("secret", weChatProperties.getSecret());
+        requestBody.put("force_refresh", false);
 
         String response = restClient.post()
                 .uri(GET_ACCESSTOKEN_URL)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED) // 关键：设置内容类型为表单
+                .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
-                .body(formData) // 传递表单数据
+                .body(requestBody.toJSONString())
                 .retrieve()
                 .body(String.class);
 
