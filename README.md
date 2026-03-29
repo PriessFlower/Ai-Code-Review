@@ -124,7 +124,18 @@ jobs:
 ```
 
 > **注意**：将 `PriessFlower/ai-code-review` 替换为本项目的实际 GitHub 路径。
+---
 
+## 文档中环境变量的获取方式
+- GITHUB_TOKEN
+> GITHUB主页，本人头像处点击下拉菜单的Setting，进入后选择左侧菜单的Developer Setting，进入页面后选择左侧菜单的 Personal access tokens，选择Tokens，点击右上角Generate new Token，然后创建一个token，这个就是GITHUB_TOKEN了，环境变量名我用的CODE_TOKEN注意一下。
+- AI_API_KEY
+> dashscope或者其他模型提供商的api_key
+- WECHAT模板消息 (https://mp.weixin.qq.com/debug/cgi-bin/sandboxinfo?action=showinfo&t=sandbox/index)
+  - WECHAT_APP_ID (登录后最上方可以看见)
+  - WECHAT_SECRET (登录后最上方可以看见)
+  - WECHAT_TEMPLATE_ID (新增测试模板后可以获得)
+  - WECHAT_TO_USER (使用微信扫描测试二维码公众号并关注后，可以在右侧栏看到自己微信昵称，复制微信号一栏的对应数据即可)
 ---
 
 ## 本项目 CI/CD 说明（workflow.yml）
