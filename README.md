@@ -126,17 +126,24 @@ jobs:
 > **注意**：将 `PriessFlower/ai-code-review` 替换为本项目的实际 GitHub 路径。
 ---
 
-## 文档中环境变量的获取方式
-- GITHUB_TOKEN
-> GITHUB主页，本人头像处点击下拉菜单的Setting，进入后选择左侧菜单的Developer Setting，进入页面后选择左侧菜单的 Personal access tokens，选择Tokens，点击右上角Generate new Token，然后创建一个token，这个就是GITHUB_TOKEN了，环境变量名我用的CODE_TOKEN注意一下。
-- AI_API_KEY
-> dashscope或者其他模型提供商的api_key
-- WECHAT模板消息 (https://mp.weixin.qq.com/debug/cgi-bin/sandboxinfo?action=showinfo&t=sandbox/index)
-  - WECHAT_APP_ID (登录后最上方可以看见)
-  - WECHAT_SECRET (登录后最上方可以看见)
-  - WECHAT_TEMPLATE_ID (新增测试模板后可以获得)
-  - WECHAT_TO_USER (使用微信扫描测试二维码公众号并关注后，可以在右侧栏看到自己微信昵称，复制微信号一栏的对应数据即可)
 ---
+## 环境变量配置说明
+
+本项目依赖以下敏感环境变量，请**务必通过 GitHub Actions Secrets（Settings > Secrets and variables > Actions）进行配置**，切勿提交至代码仓库。
+
+| 变量名               | 说明                                                                 | 获取方式 |
+|----------------------|----------------------------------------------------------------------|----------|
+| `GITHUB_TOKEN`       | 用于触发工作流或访问 GitHub API 的 Personal Access Token             | [创建 Token](https://github.com/settings/tokens)，建议最小权限：`repo` 和 `workflow` |
+| `AI_API_KEY`         | DashScope 或其他大模型服务商的 API Key                               | 参考对应服务商文档 |
+| `WECHAT_APP_ID`      | 微信公众号沙盒 AppID（仅用于测试）                                   | [微信公众号测试号平台](https://mp.weixin.qq.com/debug/cgi-bin/sandboxinfo?action=showinfo&t=sandbox/index) |
+| `WECHAT_APP_SECRET`  | 微信公众号沙盒 AppSecret                                             | 同上 |
+| `WECHAT_TEMPLATE_ID` | 消息模板 ID                                                          | 在沙盒页面新增模板后获取 |
+| `WECHAT_TO_USER`     | 接收测试消息的用户 OpenID（关注测试号后在页面右侧查看）              | 扫描沙盒提供的二维码关注后自动显示 |
+
+> **安全警告**：
+> - 所有上述变量均为敏感信息，禁止提交到 Git。
+> - `GITHUB_TOKEN` 应遵循最小权限原则。
+> - 微信沙盒凭证仅用于开发测试，不可用于生产环境。
 
 ## 本项目 CI/CD 说明（workflow.yml）
 
