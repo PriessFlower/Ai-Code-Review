@@ -50,7 +50,11 @@ public class WeChatNotifyService {
                 .retrieve()
                 .body(String.class);
 
-        String token = JSON.parseObject(response).getString("access_token");
+        JSONObject json = JSON.parseObject(response);
+        if (json.containsKey("errcode")) {
+            throw new RuntimeException("微信 access_token 获取失败: " + response);
+        }
+        String token = json.getString("access_token");
         log.info("微信 access_token 获取成功");
         return token;
     }
